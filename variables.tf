@@ -1,96 +1,54 @@
-## Copyright (c) 2021, Oracle and/or its affiliates.
+## Copyright (c) 2021 Oracle and/or its affiliates.
 ## All rights reserved. The Universal Permissive License (UPL), Version 1.0 as shown at http://oss.oracle.com/licenses/upl
 
+# Variables
 variable "tenancy_ocid" {}
-variable "compartment_ocid" {}
+variable "compartment_ocid" {
+  default = ""
+}
+variable "user_ocid" {
+  default = ""
+}
+variable "fingerprint" {
+  default = ""
+}
+variable "private_key_path" {
+  default = ""
+}
 variable "region" {}
-variable "fingerprint" {}
-variable "user_ocid" {}
-variable "private_key_path" {}
-
+variable "ATP_password" {}
 variable "availability_domain_number" {
   default = 0
 }
-
 variable "availability_domain_name" {
   default = ""
 }
 
 variable "release" {
   description = "Reference Architecture Release (OCI Architecture Center)"
-  default     = "1.1.2"
+  default     = "1.3.1"
 }
 
-variable "create_hub_drg" {
-  default = true
+variable "ssh_public_key" {
+  default = ""
+}
+variable "ssh_public_key_path" {
+  default = ""
 }
 
-variable "hub_drg_display_name" {
-  default = "hub_drg"
+variable "lb_shape" {
+  default = "flexible"
 }
 
-variable "hub_drg_attachment_display_name" {
-  default = "hub_drg_attachment"
+variable "flex_lb_min_shape" {
+  default = "10"
 }
 
-variable "igw_display_name" {
-  default = "internet-gateway"
+variable "flex_lb_max_shape" {
+  default = "100"
 }
 
-variable "hub_vcn_cidr_block" {
-  default = "10.0.0.0/16"
-}
-variable "hub_vcn_dns_label" {
-  default = "hubvcn"
-}
-variable "hub_vcn_display_name" {
-  default = "hub_vcn"
-}
-
-variable "hub_subnet_pub01_cidr_block" {
-  default = "10.0.0.0/24"
-}
-
-variable "hub_subnet_pub01_display_name" {
-  default = "hub_subnet_pub01"
-}
-
-# spoke01
-variable "spoke01_vcn_cidr_block" {
-  default = "10.10.0.0/16"
-}
-variable "spoke01_vcn_dns_label" {
-  default = "spoke01vcn"
-}
-variable "spoke01_vcn_display_name" {
-  default = "spoke01_vcn"
-}
-variable "spoke01_subnet_priv01_cidr_block" {
-  default = "10.10.0.0/24"
-}
-variable "spoke01_subnet_priv01_display_name" {
-  default = "spoke01_subnet_priv01"
-}
-
-# spoke02
-variable "spoke02_vcn_cidr_block" {
-  default = "10.20.0.0/16"
-}
-variable "spoke02_vcn_dns_label" {
-  default = "spoke02vcn"
-}
-variable "spoke02_vcn_display_name" {
-  default = "spoke02_vcn"
-}
-
-variable "spoke02_subnet_priv01_cidr_block" {
-  default = "10.20.0.0/24"
-}
-
-variable "spoke02_subnet_priv01_display_name" {
-  default = "spoke02_subnet_priv01"
-}
-
+# OS Images
 variable "instance_os" {
   description = "Operating system for compute instances"
   default     = "Oracle Linux"
@@ -98,74 +56,82 @@ variable "instance_os" {
 
 variable "linux_os_version" {
   description = "Operating system version for all Linux instances"
-  #  default     = "7.9"
-  default = "8"
+  default     = "7.9"
 }
 
-variable "InstanceShape" {
+variable "instance_shape" {
   default = "VM.Standard.E3.Flex"
 }
 
-variable "InstanceFlexShapeOCPUS" {
+variable "instance_flex_shape_ocpus" {
   default = 1
 }
 
-variable "InstanceFlexShapeMemory" {
+variable "instance_flex_shape_memory" {
   default = 10
 }
 
-variable "ssh_public_key" {
-  default = ""
-}
-
-variable "deploy_bastion_instance" {
+variable "ATP_private_endpoint" {
   default = true
 }
 
-variable "deploy_spoke01_instance" {
-  default = false
-}
-
-variable "InstanceShapeSpoke01" {
-  default = "VM.Standard.E3.Flex"
-}
-
-variable "InstanceFlexShapeOCPUSSpoke01" {
+variable "ATP_database_cpu_core_count" {
   default = 1
 }
 
-variable "InstanceFlexShapeMemorySpoke01" {
-  default = 10
-}
-
-variable "deploy_spoke02_instance" {
-  default = false
-}
-
-variable "InstanceShapeSpoke02" {
-  default = "VM.Standard.E3.Flex"
-}
-
-variable "InstanceFlexShapeOCPUSSpoke02" {
+variable "ATP_database_data_storage_size_in_tbs" {
   default = 1
 }
 
-variable "InstanceFlexShapeMemorySpoke02" {
-  default = 10
+variable "ATP_database_db_name" {
+  default = "aTFdb"
 }
 
-# Dictionary Locals
+variable "ATP_database_db_version" {
+  default = "19c"
+}
+
+variable "ATP_database_defined_tags_value" {
+  default = "value"
+}
+
+variable "ATP_database_display_name" {
+  default = "ATP"
+}
+
+variable "ATP_database_freeform_tags" {
+  default = {
+    "Owner" = "ATP"
+  }
+}
+
+variable "ATP_database_license_model" {
+  default = "LICENSE_INCLUDED"
+}
+
+variable "ATP_tde_wallet_zip_file" {
+  default = "tde_wallet_aTFdb.zip"
+}
+
+variable "ATP_private_endpoint_label" {
+  default = "ATPPrivateEndpoint"
+}
+
+variable "ATP_data_guard_enabled" {
+  default = false
+}
+
 locals {
+  # Dictionary Locals
   compute_flexible_shapes = [
     "VM.Standard.E3.Flex",
-    "VM.Standard.E4.Flex"
+    "VM.Standard.E4.Flex",
+    "VM.Optimized3.Flex",
+    "VM.Standard.A1.Flex"
   ]
-}
+  # Checks if is using Flexible Compute Shapes
+  is_flexible_node_shape = contains(local.compute_flexible_shapes, var.instance_shape)
 
-# Checks if is using Flexible Compute Shapes
-locals {
-  is_flexible_node_shape         = contains(local.compute_flexible_shapes, var.InstanceShape)
-  is_flexible_node_shape_spoke01 = contains(local.compute_flexible_shapes, var.InstanceShapeSpoke01)
-  is_flexible_node_shape_spoke02 = contains(local.compute_flexible_shapes, var.InstanceShapeSpoke02)
-  availability_domain_name       = var.availability_domain_name == "" ? lookup(data.oci_identity_availability_domains.ADs.availability_domains[var.availability_domain_number], "name") : var.availability_domain_name
+  availability_domain_name = var.availability_domain_name == "" ? lookup(data.oci_identity_availability_domains.ads.availability_domains[var.availability_domain_number], "name") : var.availability_domain_name
+  #ssh_public_key           = var.ssh_public_key == "" ? file(var.ssh_public_key_path) : var.ssh_public_key
 }

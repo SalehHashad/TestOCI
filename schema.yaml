@@ -1,8 +1,8 @@
-## Copyright © 2021, Oracle and/or its affiliates. 
+## Copyright (c) 2021 Oracle and/or its affiliates.
 ## All rights reserved. The Universal Permissive License (UPL), Version 1.0 as shown at http://oss.oracle.com/licenses/upl
 
-    title: "Create a HUB-Spoke network in Oracle Cloud Infrastructure"
-    stackDescription: Deploy a HUB-Spoke network in Oracle Cloud Infrastructure
+    title: "Create highly available three-tier web application in Oracle Cloud Infrastructure"
+    stackDescription: "Deploy a highly available three-tier web application in Oracle Cloud Infrastructure."
     schemaVersion: 1.1.0
     version: "20190404"
     locale: "en"
@@ -13,62 +13,61 @@
       variables:
       - tenancy_ocid
       - region
-      - instance_os
       - release
-      - deploy_bastion_instance
+      - private_key
+      - private_key_path
+      - private_key_password
       - availability_domain_number
+      - fingerprint
+      - user_ocid
+      - ssh_public_key_path
 
     - title: Required Configuration
       visible: true  
-      variables:  
+      variables:
       - compartment_ocid
-      - availability_domain_name 
-      - show_advanced  
+      - availability_domain_name
+      - ATP_password
+      - ATP_private_endpoint 
+      - show_advanced
 
-    - title: Networking Optional Configuration
+    - title: Load Balancer Optional Configuration
       visible: 
           and:
             - show_advanced
-      variables: 
-      - igw_display_name
-      - hub_vcn_display_name
-      - hub_vcn_cidr_block
-      - hub_vcn_dns_label
-      - hub_subnet_pub01_display_name
-      - hub_subnet_pub01_cidr_block
-      - create_hub_drg
-      - hub_drg_display_name
-      - hub_drg_attachment_display_name
-      - spoke01_vcn_display_name
-      - spoke01_vcn_cidr_block
-      - spoke01_vcn_dns_label
-      - spoke01_subnet_priv01_display_name
-      - spoke01_subnet_priv01_cidr_block
-      - spoke02_vcn_display_name
-      - spoke02_vcn_dns_label
-      - spoke02_vcn_cidr_block
-      - spoke02_subnet_priv01_display_name
-      - spoke02_subnet_priv01_cidr_block
+      variables:
+      - lb_shape
+      - flex_lb_min_shape
+      - flex_lb_max_shape 
 
     - title: Compute Optional Configuration
       visible: 
           and:
-            - show_advanced    
-      variables: 
+            - show_advanced
+      variables:
       - ssh_public_key
-      - instance_os 
-      - linux_os_version
-      - InstanceShape
-      - InstanceFlexShapeOCPUS
-      - InstanceFlexShapeMemory
-      - deploy_spoke01_instance
-      - InstanceShapeSpoke01
-      - InstanceFlexShapeOCPUSSpoke01
-      - InstanceFlexShapeMemorySpoke01
-      - deploy_spoke02_instance
-      - InstanceShapeSpoke02
-      - InstanceFlexShapeOCPUSSpoke02
-      - InstanceFlexShapeMemorySpoke02
+      - instance_os
+      - linux_os_version 
+      - instance_shape
+      - instance_flex_shape_ocpus
+      - instance_flex_shape_memory
+
+    - title: ATP Optional Configuration
+      visible: 
+          and:
+            - show_advanced
+      variables: 
+      - ATP_data_guard_enabled
+      - ATP_database_cpu_core_count
+      - ATP_database_data_storage_size_in_tbs
+      - ATP_database_db_name
+      - ATP_database_db_version
+      - ATP_database_defined_tags_value
+      - ATP_database_display_name
+      - ATP_database_freeform_tags
+      - ATP_database_license_model
+      - ATP_tde_wallet_zip_file
+      - ATP_private_endpoint_label
 
     variables:
 
@@ -78,149 +77,91 @@
         description: "Shows advanced options."
         visible: true
         default: false
-
+      
       compartment_ocid:
         type: oci:identity:compartment:id
         required: true
+        visibile: true
         title: Compartment
-        description: Compartment where you want to create the solution resources
+        description: "Compartment where you want to create the solution resources"
 
       region:
         type: oci:identity:region:name
         required: true
+        visibile: true
         title: Region
-        description: Region where you want to deploy the resources defined by this stack
+        description: "Region where you want to deploy the resources defined by this stack."
 
       availability_domain_name:
         type: oci:identity:availabilitydomain:name
         required: true
-        visible: true
+        visibile: true
         title: "Availability Domain to be chosen"
-        description: "Choose Availability Domain where infrastructure will be deployed."
+        description: "Availability Domain to be chosen"
         dependsOn:
-          regionName: ${region}
           compartmentId: ${compartment_ocid}
 
-      igw_display_name:
-        type: string
+      ATP_password:
+        type: password
         required: true
-        title: Internet Gateway Name
-        description: Display name of the Internet Gateway of the HUB VCN
+        visibile: true
+        title: "ATP Database Password for ADMIN user."
+        description: "ATP Database Password for ADMIN user."
+        minLength: 12
+        maxLength: 30
+        pattern: ^[A-Za-z][A-Za-z0-9_#\$]+$ 
 
-      hub_vcn_cidr_block:
-        type: string
-        required: true
-        title: HUB VCN CIDR Block
-        description: CIDR block that will be assigned to the HUB VCN
 
-      hub_vcn_dns_label:
-        type: string
-        required: true
-        title: DNS Label HUB VCN
-        description: DNS label that will be asigned to the HUB VCN
+      # Optional Configuration      
+      lb_shape:
+        type: enum
+        title: "Load Balancer Shape"
+        description: "Load Balancer Shape"
+        default: "flexible"
+        required: false 
+        enum:
+          - "flexible"
+          - "100Mbps"
+          - "10Mbps"
+          - "10Mbps-Micro"
+          - "400Mbps"
+          - "8000Mbps"
 
-      hub_vcn_display_name:
-        type: string
-        required: true
-        title: VCN Name
-        description: Display name assigned to the HUB VCN
-
-      hub_subnet_pub01_cidr_block:
-        type: string
-        required: true
-        title: Public Subnet CIDR Block
-        description: CIDR block that will be assigned to the Public Subnet in the HUB VCN
-
-      hub_subnet_pub01_display_name:
-        type: string
-        required: true
-        title: Public Subnet Display Name  
-        description: Display name assigned to the Public subnet in the HUB VCN
-
-      create_hub_drg:
-        type: boolean
+      flex_lb_min_shape:
+        type: enum
         required: false
-        title: Create DRG for HUB VCN
-        description: Check if you want to create Dynamic Routing Gateway (DRG) for HUB VCN.
-        default: true        
-
-      hub_drg_display_name:
-        type: string
-        required: false
-        title: HUB DRG Display Name
-        description: Display name assigned to HUB VCN DRG
+        default: "10"
+        title: "LB Flex Min Shape"
+        description: "Choose Minimum Shape for Flex Load Balancer."
+        enum:
+          - "10"
+          - "100"
+          - "1000"
+          - "400"
+          - "8000"
         visible:
           and:
-            - create_hub_drg
+            - eq:
+              - lb_shape 
+              - "flexible"
 
-      hub_drg_attachment_display_name:
-        type: string
+      flex_lb_max_shape:
+        type: enum
         required: false
-        title: HUB DRG Attachment Display Name
-        description: Display name assigned to HUB VCN DRG Attacjment
+        default: "100"
+        title: "LB Flex Max Shape"
+        description: "Choose Maximum Shape for Flex Load Balancer."
+        enum:
+          - "10"
+          - "100"
+          - "1000"
+          - "400"
+          - "8000"
         visible:
           and:
-            - create_hub_drg
-
-      spoke01_vcn_cidr_block:
-        type: string
-        required: true
-        title: Spoke 1 VCN CIDR Block
-        description: CIDR block that will be assigned to the Spoke 1 VCN
-
-      spoke01_vcn_dns_label:
-        type: string
-        required: true
-        title: DNS Label SPOKE 1 VCN
-        description: DNS label that will be asigned to the SPOKE 1 VCN
-
-      spoke01_vcn_display_name:
-        type: string
-        required: true
-        title: SPOKE 1 VCN Display Name
-        description: Display name assigned to the Spoke 1 VCN
-
-      spoke01_subnet_priv01_cidr_block:
-        type: string
-        required: true
-        title: Private Subnet CIDR Block on Spoke 1
-        description: CIDR block that will be assigned to the Private Subnet in the Spoke 1 VCN
-
-      spoke01_subnet_priv01_display_name:
-        type: string
-        required: true
-        title: Private Subnet Display Name
-        description: Display name assigned to the private subnet in the Spoke 1 VCN
-
-      spoke02_vcn_cidr_block:
-        type: string
-        required: true
-        title: Spoke 2 VCN CIDR Block
-        description: CIDR block that will be assigned to the Spoke 1 VCN
-
-      spoke02_vcn_dns_label:
-        type: string
-        required: true
-        title: DNS Label SPOKE 2 VCN
-        description: DNS label that will be asigned to the SPOKE 2 VCN
-
-      spoke02_vcn_display_name:
-        type: string
-        required: true
-        title: SPOKE 2 VCN Display Name
-        description: Display name assigned to the Spoke 2 VCN
-
-      spoke02_subnet_priv01_cidr_block:
-        type: string
-        required: true
-        title: Private Subnet CIDR Block on Spoke 2
-        description: CIDR block that will be assigned to the Private Subnet in the Spoke 2 VCN
-
-      spoke02_subnet_priv01_display_name:
-        type: string
-        required: true
-        title: Private Subnet Display Name
-        description: Display name assigned to the private subnet in the Spoke 2 VCN
+            - eq:
+              - lb_shape 
+              - "flexible"
 
       ssh_public_key:
         type: oci:core:ssh:publickey
@@ -228,53 +169,65 @@
         description: "Choose public SSH Key to be uploaded into compute instances."
         required: false
 
-      InstanceShape:
+      instance_shape:
         type: oci:core:instanceshape:name
         required: false
-        title: "Bastion Instance Shape"
-        description: A shape is a template that determines the number of CPUs, amount of memory, and other resources allocated to Bastion instance.
-        default: "VM.Standard.E2.1.Micro"
+        title: "Instance Shape"
+        description: "A shape is a template that determines the number of CPUs, amount of memory, and other resources allocated to a newly created instance."
+        default: "VM.Standard.E3.Flex"
         dependsOn:
           compartmentId: ${compartment_ocid}
 
-      InstanceFlexShapeOCPUS:
+      instance_flex_shape_ocpus:
         type: number
         required: false
         minimum: 1
         maximum: 128
         multipleOf: 1
         default: 1
-        title: "Bastion Flex Shape OCPUs"
+        title: "Flex Shape OCPUs"
         description: "Choose number of OCPUs for Flex Shape."
         visible:
           and:
             - or:
               - eq:
-                - InstanceShape 
+                - instance_shape 
                 - "VM.Standard.E3.Flex"
               - eq:
-                - InstanceShape 
+                - instance_shape 
                 - "VM.Standard.E4.Flex"
+              - eq:
+                - instance_shape 
+                - "VM.Optimized3.Flex"
+              - eq:
+                - instance_shape 
+                - "VM.Standard.A1.Flex"
 
-      InstanceFlexShapeMemory:
+      instance_flex_shape_memory:
         type: number
         required: false
         minimum: 1
         maximum: 128
         multipleOf: 1
         default: 10
-        title: "Bastion Flex Shape Memory (GB)"
+        title: "Flex Shape Memory (GB)"
         description: "Choose number GB for Flex Shape Memory."
         visible:
           and:
             - or:
               - eq:
-                - InstanceShape 
+                - instance_shape 
                 - "VM.Standard.E3.Flex"
               - eq:
-                - InstanceShape
+                - instance_shape
                 - "VM.Standard.E4.Flex"
-
+              - eq:
+                - instance_shape 
+                - "VM.Optimized3.Flex"
+              - eq:
+                - instance_shape 
+                - "VM.Standard.A1.Flex"
+      
       instance_os:
         type: enum
         required: false
@@ -289,146 +242,126 @@
         required: false
         title: "Instance OS version"
         description: "An Operating System version that determines the operating system version for the instance."
-        default: "8"
-        enum:
-          - "8"
+        default: "7.9"
+        enum: 
+          - "7.8"
           - "7.9"
 
-      deploy_spoke01_instance:
+      ATP_private_endpoint:
         type: boolean
-        title: "Spoke01 Compute Instance?"
-        description: "Check the box to deploy Compute Instance in Spoke01 VCN."
-        visible: true
-        default: false
-
-      InstanceShapeSpoke01:
-        type: oci:core:instanceshape:name
-        visible: 
-            and:
-              - deploy_spoke01_instance
+        visibile: true
+        default: true
         required: false
-        title: "Spoke01 Instance Shape"
-        description: A shape is a template that determines the number of CPUs, amount of memory, and other resources allocated to Bastion instance.
-        default: "VM.Standard.E2.1.Micro"
-        dependsOn:
-          compartmentId: ${compartment_ocid}
+        title: "ATP Database Private Endpoint"
+        description: "Check the box to deploy ATP Database with Private Endpoint."
 
-      InstanceFlexShapeOCPUSSpoke01:
+      ATP_data_guard_enabled:
+        type: boolean
+        required: true
+        visibile: true
+        default: false
+        title: "ATP Database DataGuard" 
+        description: "Check the box to enable ATP Database DataGuard." 
+
+      ATP_database_cpu_core_count:
         type: number
         required: false
         minimum: 1
         maximum: 128
         multipleOf: 1
         default: 1
-        title: "Spoke01 Flex Shape OCPUs"
-        description: "Choose number of OCPUs for Flex Shape."
-        visible:
-          and:
-            - and:
-              - deploy_spoke01_instance
-              - or:
-                - eq:
-                  - InstanceShapeSpoke01 
-                  - "VM.Standard.E3.Flex"
-                - eq:
-                  - InstanceShapeSpoke01 
-                  - "VM.Standard.E4.Flex"
+        title: "ATP Database CPU Core Count"
+        description: "Choose ATP Database CPU Core Count."
 
-      InstanceFlexShapeMemorySpoke01:
-        type: number
-        required: false
-        minimum: 1
-        maximum: 128
-        multipleOf: 1
-        default: 10
-        title: "Spoke01 Flex Shape Memory (GB)"
-        description: "Choose number GB for Flex Shape Memory."
-        visible:
-          and:
-            - and:
-              - deploy_spoke01_instance
-              - or:
-                - eq:
-                  - InstanceShapeSpoke01 
-                  - "VM.Standard.E3.Flex"
-                - eq:
-                  - InstanceShapeSpoke01 
-                  - "VM.Standard.E4.Flex"
-
-
-      deploy_spoke02_instance:
-        type: boolean
-        title: "Spoke02 Compute Instance?"
-        description: "Check the box to deploy Compute Instance in Spoke02 VCN."
-        visible: true
-        default: false
-
-      InstanceShapeSpoke02:
-        type: oci:core:instanceshape:name
-        visible: 
-            and:
-              - deploy_spoke02_instance
-        required: false
-        title: "Spoke02 Instance Shape"
-        description: A shape is a template that determines the number of CPUs, amount of memory, and other resources allocated to Bastion instance.
-        default: "VM.Standard.E2.1.Micro"
-        dependsOn:
-          compartmentId: ${compartment_ocid}
-
-      InstanceFlexShapeOCPUSSpoke02:
+      ATP_database_data_storage_size_in_tbs:
         type: number
         required: false
         minimum: 1
         maximum: 128
         multipleOf: 1
         default: 1
-        title: "Spoke02 Flex Shape OCPUs"
-        description: "Choose number of OCPUs for Flex Shape."
-        visible:
-          and:
-            - and:
-              - deploy_spoke02_instance
-              - or:
-                - eq:
-                  - InstanceShapeSpoke02 
-                  - "VM.Standard.E3.Flex"
-                - eq:
-                  - InstanceShapeSpoke02 
-                  - "VM.Standard.E4.Flex"
+        title: "ATP Database Data Storage Size (TB)"
+        description: "Choose ATP Database Data Storage Size in terabytes."
 
-      InstanceFlexShapeMemorySpoke02:
-        type: number
+      ATP_database_db_name:
+        type: string
         required: false
-        minimum: 1
-        maximum: 128
-        multipleOf: 1
-        default: 10
-        title: "Spoke02 Flex Shape Memory (GB)"
-        description: "Choose number GB for Flex Shape Memory."
-        visible:
-          and:
-            - and:
-              - deploy_spoke02_instance
-              - or:
-                - eq:
-                  - InstanceShapeSpoke02 
-                  - "VM.Standard.E3.Flex"
-                - eq:
-                  - InstanceShapeSpoke02 
-                  - "VM.Standard.E4.Flex"
+        default: "atpdb1"
+        title: "ATP Database DBNAME"
+        description: "Choose ATP Database DBNAME."
 
+      ATP_database_db_version:
+        type: enum
+        required: false
+        default: "19c"
+        title: "ATP Database Version"
+        description: "Choose ATP Database Version."
+        enum:
+          - "19c"
+
+      ATP_database_display_name:
+        type: string
+        required: false
+        default: "ATPDB"
+        title: "ATP Database Display Name"
+        description: "Choose ATP Database Display Name."
+
+      ATP_database_license_model:
+        type: enum
+        required: false
+        default: "LICENSE_INCLUDED"
+        title: "ATP Database License Model"
+        description: "Choose ATP Database License Model."
+        enum:
+          - "LICENSE_INCLUDED"
+          - "BRING_YOUR_OWN_LICENSE"
+
+      ATP_tde_wallet_zip_file:
+        type: string
+        required: false
+        visible: false
+        default: "tde_wallet_ATPdb1.zip"
+        title: "ATP Database TDE Wallet ZIP File"
+        description: "Choose ATP Database TDE Wallet ZIP File."
+      
+      ATP_private_endpoint_label:
+        type: string
+        required: false
+        visible: 
+            and:
+              - ATP_private_endpoint
+        default: "ATPPrivateEndpoint"
+        title: "ATP Database Private Endpoint Label"
+        description: "Choose ATP Database Private Endpoint Label"
+
+      ATP_database_freeform_tags:
+        type: string
+        required: false
+        title: "ATP Database Freeform Tags"
+        description: "Choose ATP Database Freeform Tags"
+
+      ATP_database_defined_tags_value:
+        type: string
+        required: false
+        title: "ATP Database Defined Tags"
+        description: "Choose ATP Database Defined Tags"
+      
       release:
         type: string
         required: false
         visible: false
         title: "Reference Architecture Release (OCI Architecture Center)"
 
-
     outputs:
-      
+
       generated_ssh_private_key:
         title: "Generated SSH Private Key"
         displayText: "Generated SSH Private Key"
         type: copyableString
         visible: true
 
+      loadbalancer_public_url:
+        title: "Loadbalancer Public URL"
+        displayText: "Loadbalancer Public URL"
+        type: string
+        visible: true
