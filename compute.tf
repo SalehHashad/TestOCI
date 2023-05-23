@@ -1,5 +1,7 @@
-## Copyright (c) 2021, Oracle and/or its affiliates.
+## Copyright (c) 2021 Oracle and/or its affiliates.
 ## All rights reserved. The Universal Permissive License (UPL), Version 1.0 as shown at http://oss.oracle.com/licenses/upl
+
+# This Terraform script provisions a compute instance
 
 data "template_file" "key_script" {
   template = file("${path.module}/scripts/sshkey.tpl")
@@ -19,28 +21,26 @@ data "template_cloudinit_config" "cloud_init" {
   }
 }
 
-# Bastion VM
+# Create Compute Instance
 
-resource "oci_core_instance" "bastion_instance" {
-  count               = var.deploy_bastion_instance ? 1 : 0
+resource "oci_core_instance" "compute_instance1" {
   availability_domain = local.availability_domain_name
   compartment_id      = var.compartment_ocid
-  display_name        = "BastionVM"
-  shape               = var.InstanceShape
+  display_name        = "Web-Server-1"
+  shape               = var.instance_shape
+  lifecycle {
+    ignore_changes = [defined_tags["Oracle-Tags.CreatedBy"], defined_tags["Oracle-Tags.CreatedOn"]]
+  }
 
   dynamic "shape_config" {
     for_each = local.is_flexible_node_shape ? [1] : []
     content {
-      memory_in_gbs = var.InstanceFlexShapeMemory
-      ocpus         = var.InstanceFlexShapeOCPUS
+      memory_in_gbs = var.instance_flex_shape_memory
+      ocpus         = var.instance_flex_shape_ocpus
     }
   }
 
-  create_vnic_details {
-    subnet_id        = oci_core_subnet.hub_subnet_pub01.id
-    display_name     = "primaryvnic"
-    assign_public_ip = true
-  }
+  fault_domain = "FAULT-DOMAIN-1"
 
   source_details {
     source_type             = "image"
@@ -48,36 +48,41 @@ resource "oci_core_instance" "bastion_instance" {
     boot_volume_size_in_gbs = "50"
   }
 
+  create_vnic_details {
+    subnet_id = oci_core_subnet.subnet_2.id
+    nsg_ids   = [oci_core_network_security_group.WebSecurityGroup.id, oci_core_network_security_group.SSHSecurityGroup.id]
+  }
+
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
     user_data           = data.template_cloudinit_config.cloud_init.rendered
   }
-
 
   defined_tags = { "${oci_identity_tag_namespace.ArchitectureCenterTagNamespace.name}.${oci_identity_tag.ArchitectureCenterTag.name}" = var.release }
+
+  timeouts {
+    create = "60m"
+  }
 }
 
-
-resource "oci_core_instance" "spoke01_test_instance" {
-  count               = var.deploy_spoke01_instance ? 1 : 0
+resource "oci_core_instance" "compute_instance2" {
   availability_domain = local.availability_domain_name
   compartment_id      = var.compartment_ocid
-  display_name        = "spoke01_test_instance"
-  shape               = var.InstanceShapeSpoke01
+  display_name        = "Web-Server-2"
+  shape               = var.instance_shape
+  lifecycle {
+    ignore_changes = [defined_tags["Oracle-Tags.CreatedBy"], defined_tags["Oracle-Tags.CreatedOn"]]
+  }
 
   dynamic "shape_config" {
-    for_each = local.is_flexible_node_shape_spoke01 ? [1] : []
+    for_each = local.is_flexible_node_shape ? [1] : []
     content {
-      memory_in_gbs = var.InstanceFlexShapeMemorySpoke01
-      ocpus         = var.InstanceFlexShapeOCPUSSpoke01
+      memory_in_gbs = var.instance_flex_shape_memory
+      ocpus         = var.instance_flex_shape_ocpus
     }
   }
 
-  create_vnic_details {
-    subnet_id        = oci_core_subnet.spoke01_subnet_priv01.id
-    display_name     = "primaryvnic"
-    assign_public_ip = false
-  }
+  fault_domain = "FAULT-DOMAIN-2"
 
   source_details {
     source_type             = "image"
@@ -85,43 +90,20 @@ resource "oci_core_instance" "spoke01_test_instance" {
     boot_volume_size_in_gbs = "50"
   }
 
-  metadata = {
-    ssh_authorized_keys = var.ssh_public_key
-    user_data           = data.template_cloudinit_config.cloud_init.rendered
-  }
-}
-
-
-
-resource "oci_core_instance" "spoke02_test_instance" {
-  count               = var.deploy_spoke01_instance ? 1 : 0
-  availability_domain = local.availability_domain_name
-  compartment_id      = var.compartment_ocid
-  display_name        = "spoke02_test_instance"
-  shape               = var.InstanceShapeSpoke02
-
-  dynamic "shape_config" {
-    for_each = local.is_flexible_node_shape_spoke02 ? [1] : []
-    content {
-      memory_in_gbs = var.InstanceFlexShapeMemorySpoke02
-      ocpus         = var.InstanceFlexShapeOCPUSSpoke02
-    }
-  }
-
   create_vnic_details {
-    subnet_id        = oci_core_subnet.spoke02_subnet_priv01.id
-    display_name     = "primaryvnic"
-    assign_public_ip = false
-  }
-
-  source_details {
-    source_type             = "image"
-    source_id               = data.oci_core_images.InstanceImageOCID.images[0].id
-    boot_volume_size_in_gbs = "50"
+    subnet_id = oci_core_subnet.subnet_2.id
+    nsg_ids   = [oci_core_network_security_group.WebSecurityGroup.id, oci_core_network_security_group.SSHSecurityGroup.id]
   }
 
   metadata = {
     ssh_authorized_keys = var.ssh_public_key
     user_data           = data.template_cloudinit_config.cloud_init.rendered
   }
+
+  defined_tags = { "${oci_identity_tag_namespace.ArchitectureCenterTagNamespace.name}.${oci_identity_tag.ArchitectureCenterTag.name}" = var.release }
+
+  timeouts {
+    create = "60m"
+  }
 }
+
